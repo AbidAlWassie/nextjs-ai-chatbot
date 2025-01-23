@@ -27,6 +27,12 @@ interface DocumentPreviewProps {
   args?: any;
 }
 
+interface HitboxLayerProps {
+  hitboxRef: React.RefObject<HTMLDivElement | null>;
+  result: any;
+  setBlock: (updaterFn: UIBlock | ((currentBlock: UIBlock) => UIBlock)) => void;
+}
+
 export function DocumentPreview({
   isReadonly,
   result,
@@ -135,18 +141,15 @@ const LoadingSkeleton = ({ blockKind }: { blockKind: BlockKind }) => (
   </div>
 );
 
-const PureHitboxLayer = ({
-  hitboxRef,
-  result,
-  setBlock,
-}: {
-  hitboxRef: React.RefObject<HTMLDivElement>;
-  result: any;
-  setBlock: (updaterFn: UIBlock | ((currentBlock: UIBlock) => UIBlock)) => void;
-}) => {
+const PureHitboxLayer = ({ hitboxRef, result, setBlock }: HitboxLayerProps) => {
   const handleClick = useCallback(
     (event: MouseEvent<HTMLElement>) => {
-      const boundingBox = event.currentTarget.getBoundingClientRect();
+      if (hitboxRef.current !== null) return; // Safely handle null
+
+      if (!hitboxRef.current) return;
+      const boundingBox = (
+        hitboxRef.current as HTMLDivElement
+      ).getBoundingClientRect();
 
       setBlock((block) =>
         block.status === "streaming"
@@ -166,7 +169,7 @@ const PureHitboxLayer = ({
             }
       );
     },
-    [setBlock, result]
+    [setBlock, result, hitboxRef]
   );
 
   return (
@@ -186,9 +189,8 @@ const PureHitboxLayer = ({
   );
 };
 
-const HitboxLayer = memo(PureHitboxLayer, (prevProps, nextProps) => {
-  if (!equal(prevProps.result, nextProps.result)) return false;
-  return true;
+export const HitboxLayer = memo(PureHitboxLayer, (prevProps, nextProps) => {
+  return equal(prevProps.result, nextProps.result);
 });
 
 const PureDocumentHeader = ({
